@@ -1,0 +1,39 @@
+{
+  "name": "jev",
+  "abstract": "Natural-language WHERE clauses, ranking and classification powered by TypeSafe's Jev model",
+  "description": "jev(table, 'condition') judges every row of a table with TypeSafe's System One model and returns a boolean, a probability, a rubric score or a class. Rows are batched into a few parallel API requests and cached per session. No index required.",
+  "version": "0.1.0",
+  "maintainer": ["Zachi <me@zachi.dev>"],
+  "license": "postgresql",
+  "provides": {
+    "jev": {
+      "abstract": "Natural-language predicates for PostgreSQL",
+      "file": "sql/jev--0.1.0.sql",
+      "docfile": "README.md",
+      "version": "0.1.0"
+    }
+  },
+  "prereqs": {
+    "runtime": {
+      "requires": {
+        "PostgreSQL": "14.0.0",
+        "plpython3u": 0
+      }
+    }
+  },
+  "resources": {
+    "homepage": "https://github.com/realZachi/pg-jev",
+    "bugtracker": { "web": "https://github.com/realZachi/pg-jev/issues" },
+    "repository": {
+      "url": "https://github.com/realZachi/pg-jev.git",
+      "web": "https://github.com/realZachi/pg-jev",
+      "type": "git"
+    }
+  },
+  "generated_by": "Zachi",
+  "meta-spec": {
+    "version": "1.0.0",
+    "url": "https://pgxn.org/meta/spec.txt"
+  },
+  "tags": ["ai", "llm", "semantic search", "fuzzy", "classification", "typesafe", "plpython"]
+}

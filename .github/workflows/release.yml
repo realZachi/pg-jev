@@ -1,0 +1,22 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  dist:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build PGXN distribution zip
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          git archive --format zip --prefix=jev-$version/ -o jev-$version.zip HEAD
+          echo "ZIP=jev-$version.zip" >> $GITHUB_ENV
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP }}
+          generate_release_notes: true

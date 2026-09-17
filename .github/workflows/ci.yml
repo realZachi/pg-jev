@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  regress:
+    name: PostgreSQL ${{ matrix.pg }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: [14, 15, 16, 17]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL ${{ matrix.pg }} with PL/Python from PGDG
+        run: |
+          sudo apt-get install -y curl ca-certificates
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-${{ matrix.pg }} postgresql-plpython3-${{ matrix.pg }} postgresql-server-dev-${{ matrix.pg }}
+          sudo systemctl stop postgresql || true
+
+      - name: Install extension
+        run: sudo make install PG_CONFIG=/usr/lib/postgresql/${{ matrix.pg }}/bin/pg_config
+
+      - name: Run regression tests
+        run: |
+          export PATH=/usr/lib/postgresql/${{ matrix.pg }}/bin:$PATH
+          export PGDATA=/tmp/pgdata PGPORT=5499
+          bash test/run.sh
+
+      - name: Upload regression diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-pg${{ matrix.pg }}
+          path: |
+            test/regression.diffs
+            test/regression.out
+            test/results/
+
+  lint-meta:
+    name: Validate META.json
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -c "import json; m=json.load(open('META.json')); assert m['version']==m['provides']['jev']['version'], 'version mismatch'; print('META.json ok', m['version'])"
+      - name: Control file version matches META.json
+        run: |
+          ctl=$(sed -n "s/default_version *= *'\(.*\)'/\1/p" jev.control)
+          meta=$(python3 -c "import json; print(json.load(open('META.json'))['version'])")
+          test "$ctl" = "$meta" && test -f "sql/jev--$ctl.sql"

@@ -1,0 +1,7 @@
+test/results/
+test/regression.diffs
+test/regression.out
+*.zip
+.env
+__pycache__/
+.DS_Store

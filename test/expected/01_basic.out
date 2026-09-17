@@ -1,0 +1,152 @@
+-- Regression tests run against test/mock_api.py (deterministic answers), not the live API.
+\set VERBOSITY terse
+CREATE EXTENSION jev;
+SET jev.api_url = 'http://127.0.0.1:8765/v1/systemone';
+SET jev.api_key = 'test-key';
+SET jev.notices = off;
+SELECT jev_version();
+ jev_version 
+-------------
+ 0.1.0
+(1 row)
+
+CREATE TABLE cities (id int PRIMARY KEY, name text, country text);
+INSERT INTO cities VALUES
+  (1, 'Berlin', 'Germany'), (2, 'Tokyo', 'Japan'), (3, 'Paris', 'France'),
+  (4, 'Lima', 'Peru'), (5, 'Munich', 'Germany');
+-- Noul predicate (mock: 0.9 when the last word of the condition appears in the row)
+SELECT name FROM cities WHERE jev(cities, 'the country is Germany') ORDER BY id;
+  name  
+--------
+ Berlin
+ Munich
+(2 rows)
+
+SELECT name, jev_prob(cities, 'the country is Germany') AS p FROM cities ORDER BY id;
+  name  |  p  
+--------+-----
+ Berlin | 0.9
+ Tokyo  | 0.1
+ Paris  | 0.1
+ Lima   | 0.1
+ Munich | 0.9
+(5 rows)
+
+-- Threshold: explicit argument, then the jev.threshold setting
+SELECT count(*) AS above_095 FROM cities WHERE jev(cities, 'the country is Germany', 0.95);
+ above_095 
+-----------
+         0
+(1 row)
+
+SET jev.threshold = 0.05;
+SELECT count(*) AS above_005 FROM cities WHERE jev(cities, 'the country is Germany');
+ above_005 
+-----------
+         5
+(1 row)
+
+RESET jev.threshold;
+-- The whole table was judged in one request; every later call was a cache hit
+SELECT (jev_stats()->>'requests')::int        AS requests,
+       (jev_stats()->>'rows_evaluated')::int  AS rows_evaluated,
+       (jev_stats()->>'cached_answers')::int  AS cached_answers,
+       (jev_stats()->>'cache_hits')::int > 0  AS had_cache_hits,
+       (jev_stats()->>'errors')::int          AS errors;
+ requests | rows_evaluated | cached_answers | had_cache_hits | errors 
+----------+----------------+----------------+----------------+--------
+        1 |              5 |              5 | t              |      0
+(1 row)
+
+-- batch_size controls how many rows share one request
+SET jev.batch_size = 2;
+SELECT count(*) AS paris FROM cities WHERE jev(cities, 'the name is Paris');
+ paris 
+-------
+     1
+(1 row)
+
+SELECT (jev_stats()->>'requests')::int AS requests_after_batched_run;
+ requests_after_batched_run 
+----------------------------
+                          4
+(1 row)
+
+RESET jev.batch_size;
+-- Score and Choice primitives
+SELECT name,
+       jev_score(cities, 'how big is the city?', ARRAY['small', 'medium', 'large'])      AS score,
+       jev_score_norm(cities, 'how big is the city?', ARRAY['small', 'medium', 'large']) AS score_norm
+FROM cities ORDER BY id;
+  name  | score | score_norm 
+--------+-------+------------
+ Berlin |     1 |        0.5
+ Tokyo  |     1 |        0.5
+ Paris  |     2 |          1
+ Lima   |     2 |          1
+ Munich |     1 |        0.5
+(5 rows)
+
+SELECT name, jev_choice(cities, 'which continent?', ARRAY['europe', 'asia', 'americas']) AS continent
+FROM cities ORDER BY id;
+  name  | continent 
+--------+-----------
+ Berlin | asia
+ Tokyo  | asia
+ Paris  | americas
+ Lima   | americas
+ Munich | asia
+(5 rows)
+
+SELECT jev_eval(cities, 'which continent?', 'choice', ARRAY['europe', 'asia', 'americas']) AS raw
+FROM cities WHERE id = 1;
+                                                           raw                                                           
+-------------------------------------------------------------------------------------------------------------------------
+ {"type": "choice", "choice": "asia", "confidence": 1.0, "probabilities": {"asia": 1.0, "europe": 0.0, "americas": 0.0}}
+(1 row)
+
+SELECT jev_confidence(cities, 'which continent?', 'choice', ARRAY['europe', 'asia', 'americas']) AS confidence
+FROM cities WHERE id = 1;
+ confidence 
+------------
+          1
+(1 row)
+
+-- Anonymous records (subquery) cannot be read ahead but are still judged correctly
+SELECT s.name FROM (SELECT name, country FROM cities WHERE id <= 3) s WHERE jev(s, 'the country is Japan');
+ name  
+-------
+ Tokyo
+(1 row)
+
+-- A row inserted after the read-ahead is judged on its own
+INSERT INTO cities VALUES (6, 'Hamburg', 'Germany');
+SELECT name FROM cities WHERE jev(cities, 'the country is Germany') ORDER BY id;
+  name   
+---------
+ Berlin
+ Munich
+ Hamburg
+(3 rows)
+
+-- Combines with ordinary SQL
+SELECT name FROM cities WHERE jev(cities, 'the country is Germany') AND id > 1 ORDER BY id;
+  name   
+---------
+ Munich
+ Hamburg
+(2 rows)
+
+-- Cache can be cleared
+SELECT jev_cache_clear();
+ jev_cache_clear 
+-----------------
+ 
+(1 row)
+
+SELECT (jev_stats()->>'cached_answers')::int AS cached_after_clear;
+ cached_after_clear 
+--------------------
+                  0
+(1 row)
+
