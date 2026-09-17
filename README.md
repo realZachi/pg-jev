@@ -1,7 +1,6 @@
 # jev — natural-language `WHERE` clauses for PostgreSQL
 
 [![CI](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml/badge.svg)](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml)
-[![PGXN](https://badge.fury.io/pg/jev.svg)](https://pgxn.org/dist/jev/)
 [![License](https://img.shields.io/badge/license-PostgreSQL-blue.svg)](LICENSE)
 
 `jev` lets you filter, rank and classify rows with plain English. Every row is judged by
@@ -54,12 +53,6 @@ included in the EDB and Postgres.app builds), and a TypeSafe API key from https:
 git clone https://github.com/realZachi/pg-jev.git && cd pg-jev
 make install            # uses pg_config on PATH; or: make install PG_CONFIG=/path/to/pg_config
 psql -c "CREATE EXTENSION jev"   # requires superuser (plpython3u is an untrusted language)
-```
-
-### From PGXN
-
-```bash
-pgxn install jev
 ```
 
 ### Docker

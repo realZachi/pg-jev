@@ -7,7 +7,7 @@ This is the checklist for releasing `jev`. It doubles as a guide to how PostgreS
 | Channel | What it is | How they install |
 | --- | --- | --- |
 | **GitHub / git** | Source of truth. `make install` via PGXS works on any machine with `pg_config`. | `git clone … && make install` |
-| **PGXN** (pgxn.org) | The PostgreSQL Extension Network: a CPAN-style index of source distributions. Indexed by search engines, used by `pgxn` client, Trunk, pgxman and distro packagers. | `pgxn install jev` |
+| **PGXN** (pgxn.org) | The PostgreSQL Extension Network: a CPAN-style index of source distributions. Requires a (free, manually approved) account at manager.pgxn.org. Not done yet for jev; planned. | `pgxn install jev` (once published) |
 | **Trunk** (pgt.dev) | Pre-built binaries per PG version; used by Tembo and others. Optional. | `trunk install jev` |
 | **pgxman** | apt-style packages for extensions. Optional. | `pgxman install jev` |
 | **Docker image** | Easiest way to try it. Publish to GHCR or Docker Hub. | `docker run ghcr.io/realzachi/pg-jev` |
@@ -24,9 +24,10 @@ binary: PGXN plus a Docker image covers nearly everyone.
 2. **Test.** `make docker-test PG_MAJOR=14` … `17`. CI does the same on every push.
 3. **Tag.** `git tag -a vX.Y.Z -m "jev X.Y.Z" && git push --tags`. The GitHub release workflow builds the
    PGXN zip and attaches it to the release.
-4. **PGXN.** Create an account at https://manager.pgxn.org, then upload the zip from `make dist`
-   (or use `pgxn-utils`: `pgxn-utils release`). The distribution appears at https://pgxn.org/dist/jev/ within
-   minutes. `META.json` must validate: `pgxn-utils validate` or https://pgxn.org/meta/validator.
+4. **PGXN (when ready).** Create an account at https://manager.pgxn.org, then upload the zip from `make dist`
+   at https://manager.pgxn.org/upload. The distribution appears at https://pgxn.org/dist/jev/ within minutes.
+   `META.json` is already in place for this step. Add the PGXN badge and a "From PGXN" install section to the
+   README afterwards.
 5. **Docker.** `docker build -t ghcr.io/realzachi/pg-jev:X.Y.Z-pg16 --build-arg PG_MAJOR=16 .` for each supported
    major, push, and add `latest`.
 6. **Announce.** pgsql-announce@lists.postgresql.org (moderated, extensions welcome), the PostgreSQL
