@@ -1,7 +1,7 @@
 # postgres:<PG_MAJOR> with PL/Python and the jev extension installed.
 #   docker build -t pg-jev .
 #   docker run -e POSTGRES_PASSWORD=pw -e TYPESAFE_API_KEY=... -p 5432:5432 pg-jev
-#   psql ... -c "CREATE EXTENSION jev"
+#   psql ... -c "CREATE EXTENSION jev CASCADE"
 ARG PG_MAJOR=16
 FROM postgres:${PG_MAJOR}
 ARG PG_MAJOR

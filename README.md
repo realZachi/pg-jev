@@ -17,7 +17,7 @@ instead of generated text. No index, no embeddings, no vector column.
 Website: [pgjev.com](https://pgjev.com)
 
 ```sql
-CREATE EXTENSION jev;
+CREATE EXTENSION jev CASCADE;
 
 SELECT * FROM people WHERE jev(people, 'the name is European');
 
@@ -76,7 +76,7 @@ included in the EDB and Postgres.app builds), and a TypeSafe API key from https:
 ```bash
 git clone https://github.com/realZachi/pg-jev.git && cd pg-jev
 make install            # uses pg_config on PATH; or: make install PG_CONFIG=/path/to/pg_config
-psql -c "CREATE EXTENSION jev"   # requires superuser (plpython3u is an untrusted language)
+psql -c "CREATE EXTENSION jev CASCADE"   # superuser required (plpython3u is untrusted); CASCADE creates plpython3u
 ```
 
 ### Docker
@@ -84,7 +84,7 @@ psql -c "CREATE EXTENSION jev"   # requires superuser (plpython3u is an untruste
 ```bash
 docker build -t pg-jev .                       # add --build-arg PG_MAJOR=17 for another major
 docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=pw -e TYPESAFE_API_KEY=your-key pg-jev
-psql postgres://postgres:pw@localhost/postgres -c "CREATE EXTENSION jev"
+psql postgres://postgres:pw@localhost/postgres -c "CREATE EXTENSION jev CASCADE"
 ```
 
 ### API key
@@ -155,6 +155,20 @@ Jev answers the question you wrote, literally. A few things that help (more in t
   own cache.
 - `plpython3u` is an untrusted language: only superusers can create the extension, and functions run with the
   server's OS privileges.
+
+## For AI agents
+
+The repo ships an [agent skill](.agents/skills/pgjev/SKILL.md) that teaches Claude Code, Codex, Cursor and other
+agents to install, configure, query and explain pgjev, with a server preflight script, an installer and a smoke
+test. Install it into your project with [skills.sh](https://skills.sh):
+
+```bash
+npx skills add realZachi/pg-jev
+```
+
+Then ask your agent things like "install pgjev on this server", "find the tickets where the customer threatens to
+cancel" or "what can jev do". The docs are also readable as Markdown for agents: append `.md` to any page under
+https://pgjev.com/docs (see [pgjev.com/docs/for-agents](https://pgjev.com/docs/for-agents)).
 
 ## Development
 
