@@ -69,7 +69,26 @@ batches of 40 and are just as fast, because a request's latency barely depends o
 ## Install
 
 Requirements: PostgreSQL 14–17 with `plpython3u` (package `postgresql-plpython3-NN` on Debian/Ubuntu,
-included in the EDB and Postgres.app builds), and a TypeSafe API key from https://console.typesafe.ai.
+included in the EDB and Postgres.app builds), a superuser, and a TypeSafe API key from https://console.typesafe.ai.
+Managed hosts that withhold superuser or `plpython3u` (Supabase, Neon, RDS, …) cannot run it; see
+[Where it runs](https://pgjev.com/docs/getting-started/where-it-runs).
+
+### With an AI agent (easiest)
+
+The repo ships an [agent skill](.agents/skills/pgjev/SKILL.md) on [skills.sh](https://skills.sh). Install it into
+your project and tell Claude Code, Codex, Cursor or any other skill-aware agent to finish the job:
+
+```bash
+npx skills add realZachi/pg-jev
+```
+
+> Install pgjev on this server and set it up.
+
+The agent runs a preflight (PostgreSQL version, `plpython3u`, superuser), `make install` against the right
+`pg_config`, `CREATE EXTENSION jev CASCADE`, places the API key and runs a smoke test. Afterwards it also knows how
+to write cost-conscious `jev()` queries ("find the tickets where the customer threatens to cancel") and to explain
+what pgjev can do. The docs are readable as Markdown for agents too: append `.md` to any page under
+https://pgjev.com/docs (see [For agents](https://pgjev.com/docs/for-agents)).
 
 ### From source (PGXS)
 
@@ -155,20 +174,6 @@ Jev answers the question you wrote, literally. A few things that help (more in t
   own cache.
 - `plpython3u` is an untrusted language: only superusers can create the extension, and functions run with the
   server's OS privileges.
-
-## For AI agents
-
-The repo ships an [agent skill](.agents/skills/pgjev/SKILL.md) that teaches Claude Code, Codex, Cursor and other
-agents to install, configure, query and explain pgjev, with a server preflight script, an installer and a smoke
-test. Install it into your project with [skills.sh](https://skills.sh):
-
-```bash
-npx skills add realZachi/pg-jev
-```
-
-Then ask your agent things like "install pgjev on this server", "find the tickets where the customer threatens to
-cancel" or "what can jev do". The docs are also readable as Markdown for agents: append `.md` to any page under
-https://pgjev.com/docs (see [pgjev.com/docs/for-agents](https://pgjev.com/docs/for-agents)).
 
 ## Development
 
