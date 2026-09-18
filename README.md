@@ -5,6 +5,7 @@
 # jev — ask your Postgres tables questions in plain language
 
 [![CI](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml/badge.svg)](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml)
+[![PGXN](https://badge.fury.io/pg/jev.svg)](https://pgxn.org/dist/jev/)
 [![License](https://img.shields.io/badge/license-PostgreSQL-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/website-pgjev.com-0a56cf.svg)](https://pgjev.com)
 
@@ -84,11 +85,22 @@ npx skills add realZachi/pg-jev
 
 > Install pgjev on this server and set it up.
 
-The agent runs a preflight (PostgreSQL version, `plpython3u`, superuser), `make install` against the right
+The agent runs a preflight (PostgreSQL version, `plpython3u`, superuser), `pgxn install jev` or `make install` against the right
 `pg_config`, `CREATE EXTENSION jev CASCADE`, places the API key and runs a smoke test. Afterwards it also knows how
 to write cost-conscious `jev()` queries ("find the tickets where the customer threatens to cancel") and to explain
 what pgjev can do. The docs are readable as Markdown for agents too: append `.md` to any page under
 https://pgjev.com/docs (see [For agents](https://pgjev.com/docs/for-agents)).
+
+### From PGXN
+
+```bash
+pip install pgxnclient       # once; also available as `pgxn-client` in Debian/Ubuntu and Homebrew
+pgxn install jev             # downloads the release from pgxn.org and runs `make install` against pg_config on PATH
+psql -c "CREATE EXTENSION jev CASCADE"
+```
+
+Use `pgxn install jev --pg_config=/path/to/pg_config` (or `sudo pgxn install jev`) when the server's `pg_config`
+is not on PATH or the extension directory is not writable.
 
 ### From source (PGXS)
 

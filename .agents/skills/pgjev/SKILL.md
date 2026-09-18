@@ -39,7 +39,11 @@ user this early rather than after a failed build. Docker is the way to try it wi
 1. Check the target server: `bash scripts/check_server.sh [psql connection args]`. It reports the version,
    whether `plpython3u` is available, whether you are superuser, whether `jev` is already installed and whether
    an API key is configured, then prints a verdict.
-2. Install the extension files (nothing to compile; PGXS just copies `jev.control` + SQL):
+2. Install the extension files (nothing to compile; PGXS just copies `jev.control` + SQL). Pick one:
+   - From PGXN (preferred when `pgxn` is available or `pip install pgxnclient` is acceptable; no clone to manage):
+     `bash scripts/install.sh --pgxn [--pg-config /path/to/pg_config] [--db mydb]`, which runs
+     `pgxn install jev` (pinned with `--ref X.Y.Z`) and then `CREATE EXTENSION IF NOT EXISTS jev CASCADE`.
+     By hand: `pgxn install jev [--pg_config PATH]` (`sudo` if the extension dir is root-owned).
    - From source: `bash scripts/install.sh [--pg-config /path/to/pg_config] [--db mydb]`. It clones the repo
      into a temp dir (or uses `--source DIR` / the current checkout), runs `make install`, then
      `CREATE EXTENSION IF NOT EXISTS jev CASCADE` in `--db`. Pass `--no-create` to stop after `make install`.
@@ -131,9 +135,9 @@ pooled connections for the session and is the first thing to look at.
 ## Files in this skill
 
 - `scripts/check_server.sh` — preflight: version, `plpython3u`, superuser, jev installed, key configured.
-- `scripts/install.sh` — clone (or use a checkout), `make install`, `CREATE EXTENSION … CASCADE`.
+- `scripts/install.sh` — `pgxn install jev` (`--pgxn`) or clone + `make install`, then `CREATE EXTENSION … CASCADE`.
 - `scripts/smoke_test.sql` — one call per function on a temp table, then `jev_stats()`.
-- `references/install.md` — requirements, source/Docker/package details, API key placement, troubleshooting.
+- `references/install.md` — requirements, PGXN/source/Docker details, API key placement, troubleshooting.
 - `references/functions.md` — every function, argument, return type, the `jev_eval` jsonb shape.
 - `references/settings.md` — every GUC with default and when to change it.
 - `references/query-patterns.md` — worked SQL for filter, rank, classify, score, views, joins, thresholds, spend.

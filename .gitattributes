@@ -1,0 +1,7 @@
+# Keep the PGXN / `make dist` archive to what an installer needs.
+.agents         export-ignore
+.claude         export-ignore
+.github         export-ignore
+.editorconfig   export-ignore
+.gitattributes  export-ignore
+.gitignore      export-ignore

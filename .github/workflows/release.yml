@@ -11,12 +11,25 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Build PGXN distribution zip
+      - name: Build and validate PGXN distribution zip
         run: |
+          docker run --rm -v "$PWD":/repo -w /repo pgxn/pgxn-tools pgxn-bundle
           version=${GITHUB_REF_NAME#v}
-          git archive --format zip --prefix=jev-$version/ -o jev-$version.zip HEAD
+          test -f jev-$version.zip   # META.json version must match the tag
           echo "ZIP=jev-$version.zip" >> $GITHUB_ENV
       - uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.ZIP }}
           generate_release_notes: true
+      - name: Release to PGXN
+        env:
+          PGXN_USERNAME: ${{ secrets.PGXN_USERNAME }}
+          PGXN_PASSWORD: ${{ secrets.PGXN_PASSWORD }}
+        run: |
+          if [ -z "$PGXN_PASSWORD" ]; then
+            echo "PGXN_USERNAME/PGXN_PASSWORD secrets not set; skipping PGXN upload"
+            exit 0
+          fi
+          docker run --rm -v "$PWD":/repo -w /repo \
+            -e PGXN_USERNAME -e PGXN_PASSWORD \
+            pgxn/pgxn-tools pgxn-release

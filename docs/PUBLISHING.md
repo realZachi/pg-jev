@@ -7,7 +7,7 @@ This is the checklist for releasing `jev`. It doubles as a guide to how PostgreS
 | Channel | What it is | How they install |
 | --- | --- | --- |
 | **GitHub / git** | Source of truth. `make install` via PGXS works on any machine with `pg_config`. | `git clone … && make install` |
-| **PGXN** (pgxn.org) | The PostgreSQL Extension Network: a CPAN-style index of source distributions. Requires a (free, manually approved) account at manager.pgxn.org. Not done yet for jev; planned. | `pgxn install jev` (once published) |
+| **PGXN** (pgxn.org) | The PostgreSQL Extension Network: a CPAN-style index of source distributions. Requires a (free, manually approved) account at manager.pgxn.org. | `pgxn install jev` |
 | **Trunk** (pgt.dev) | Pre-built binaries per PG version; used by Tembo and others. Optional. | `trunk install jev` |
 | **pgxman** | apt-style packages for extensions. Optional. | `pgxman install jev` |
 | **Docker image** | Easiest way to try it. Publish to GHCR or Docker Hub. | `docker run ghcr.io/realzachi/pg-jev` |
@@ -22,12 +22,16 @@ binary: PGXN plus a Docker image covers nearly everyone.
 1. **Version bump.** Update `default_version` in `jev.control`, rename/add `sql/jev--X.Y.Z.sql`, add an upgrade
    script `sql/jev--OLD--NEW.sql` if the SQL objects changed, update `jev_version()`, `META.json`, `CHANGELOG.md`.
 2. **Test.** `make docker-test PG_MAJOR=14` … `17`. CI does the same on every push.
-3. **Tag.** `git tag -a vX.Y.Z -m "jev X.Y.Z" && git push --tags`. The GitHub release workflow builds the
-   PGXN zip and attaches it to the release.
-4. **PGXN (when ready).** Create an account at https://manager.pgxn.org, then upload the zip from `make dist`
-   at https://manager.pgxn.org/upload. The distribution appears at https://pgxn.org/dist/jev/ within minutes.
-   `META.json` is already in place for this step. Add the PGXN badge and a "From PGXN" install section to the
-   README afterwards.
+3. **Check the bundle.** `docker run --rm --platform linux/amd64 -v "$PWD":/repo -w /repo pgxn/pgxn-tools pgxn-bundle`
+   validates `META.json` and writes `jev-X.Y.Z.zip` (same content as `make dist`; `.gitattributes` keeps
+   `.agents`, `.claude`, `.github` and dotfiles out of it). Note that `git archive` reads `.gitattributes` from the
+   commit, so those rules have to be committed to take effect.
+4. **Tag.** `git tag -a vX.Y.Z -m "jev X.Y.Z" && git push origin vX.Y.Z`. The release workflow attaches the zip
+   to a GitHub release and, when the `PGXN_USERNAME` / `PGXN_PASSWORD` repository secrets are set, uploads it to
+   PGXN with `pgxn-release`. The distribution appears at https://pgxn.org/dist/jev/ within minutes and is then
+   installable with `pgxn install jev`.
+   Manual alternative: upload the zip at https://manager.pgxn.org/upload. A version can only be released once;
+   fixing a published release means bumping the version.
 5. **Docker.** `docker build -t ghcr.io/realzachi/pg-jev:X.Y.Z-pg16 --build-arg PG_MAJOR=16 .` for each supported
    major, push, and add `latest`.
 6. **Announce.** pgsql-announce@lists.postgresql.org (moderated, extensions welcome), the PostgreSQL

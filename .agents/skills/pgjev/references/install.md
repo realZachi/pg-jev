@@ -38,6 +38,24 @@ Kubernetes). Say so up front; do not send users down a build path that ends at `
 `CASCADE`. Without it a fresh database fails with `required extension "plpython3u" is not installed`, so always
 write `CREATE EXTENSION jev CASCADE` (or create `plpython3u` first).
 
+## Install from PGXN
+
+The release is published on the PostgreSQL Extension Network (https://pgxn.org/dist/jev/). `pgxn install`
+downloads the distribution and runs the same `make install` as the source path, so it needs `make` and the
+target server's `pg_config` too, but no git clone and no checkout to keep around.
+
+```bash
+pip install pgxnclient                   # once; also `apt install pgxn-client` / `brew install pgxnclient`
+pgxn install jev                         # latest release, pg_config from PATH
+pgxn install jev --pg_config=/usr/lib/postgresql/16/bin/pg_config
+sudo pgxn install jev                    # when the extension directory is root-owned
+pgxn install 'jev=0.2.0'                 # pin a version
+```
+
+Then `CREATE EXTENSION jev CASCADE;` as a superuser (see below). `scripts/install.sh --pgxn` does both steps and
+maps `--pg-config`, `--ref` and `--sudo` onto the `pgxn` flags. If `pgxn install jev` reports that the
+distribution is not found, the release is not on PGXN yet: fall back to source.
+
 ## Install from source (PGXS)
 
 There is nothing to compile: `make install` copies `jev.control` and `sql/jev--*.sql` into the extension
@@ -60,7 +78,7 @@ CREATE EXTENSION jev CASCADE;    -- CASCADE also creates plpython3u
 SELECT jev_version();
 ```
 
-`scripts/install.sh` automates this: it clones (or uses `--source DIR`), runs `make install` with the chosen
+`scripts/install.sh` automates this: it clones (or uses `--source DIR`, or `pgxn install` with `--pgxn`), runs `make install` with the chosen
 `pg_config`, and runs `CREATE EXTENSION IF NOT EXISTS jev CASCADE` in `--db`. Use `--ref vX.Y.Z` to pin a release and
 `--no-create` to skip the SQL step (e.g. when the SQL must run as a different user).
 
@@ -127,6 +145,8 @@ row with `requests ≥ 1` and `errors = 0`.
 | `could not open extension control file ".../jev.control"` | files were installed into another Postgres | `make install PG_CONFIG=<pg_config of the server you connect to>`; compare `pg_config --sharedir` with `SHOW data_directory`/version |
 | `could not open extension control file ".../plpython3u.control"` | PL/Python not installed | install `postgresql-plpython3-NN`; on managed hosts: not possible |
 | `required extension "plpython3u" is not installed` | `CREATE EXTENSION jev` without `CASCADE` on a database where PL/Python was never created | `CREATE EXTENSION jev CASCADE;` |
+| `pgxn: command not found` | pgxnclient not installed | `pip install pgxnclient` (or the distro package), or use the source path |
+| `pgxn install jev` → distribution not found / no release | not on PGXN (yet), or a typo in the pin | check https://pgxn.org/dist/jev/; install from source |
 | `permission denied to create extension "jev"` / `must be superuser` | not a superuser | connect as one (`postgres`) or ask the DBA |
 | `jev: no API key. SET jev.api_key = '...' or start the server with TYPESAFE_API_KEY set.` | no GUC and no server env | see API key placement; `TYPESAFE_API_KEY` in your shell is not the server's |
 | `jev: TypeSafe API error 401 {...}` | invalid key | check the key in console.typesafe.ai |
