@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/header.svg" alt="pg-jev — natural-language WHERE clauses for PostgreSQL" width="100%">
+</p>
+
 # jev — natural-language `WHERE` clauses for PostgreSQL
 
 [![CI](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml/badge.svg)](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml)
@@ -105,6 +109,8 @@ All settings are plain GUCs: `SET jev.<name> = ...`, `ALTER ROLE ... SET`, `ALTE
 | `jev.notices` | `on` | Emit a `NOTICE` per batch run with request count, tokens, estimated cost and time |
 | `jev.api_url` | `https://api.typesafe.ai/v1/systemone` | Endpoint (proxies, mocks) |
 | `jev.timeout` | `90` | Seconds per API request |
+| `jev.max_rows_per_statement` | `0` (off) | Abort a statement that would send more rows than this to the API. Spend guard for shared deployments |
+| `jev.max_chars_per_statement` | `0` (off) | Same, for characters of row data |
 
 ## Writing good conditions
 

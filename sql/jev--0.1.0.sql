@@ -21,6 +21,9 @@
 --   jev.notices            default 'on'  emit a NOTICE per batch run
 --   jev.api_url            default 'https://api.typesafe.ai/v1/systemone' (proxies, mocks, tests)
 --   jev.timeout            default 90    seconds per API request
+--   jev.max_rows_per_statement   default 0 (off)  abort a statement that would send more rows than this to the API
+--   jev.max_chars_per_statement  default 0 (off)  abort a statement that would send more characters of row data than this
+--                                                 Both are spend guards for shared or public deployments.
 
 \echo Use "CREATE EXTENSION jev" to load this file. \quit
 
@@ -31,7 +34,7 @@ STABLE
 AS $py$
 import json, os, time, hashlib, threading
 import urllib.request, urllib.error
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 USD_PER_INPUT_TOKEN = 0.042 / 1_000_000  # jev-1.13 list price; output tokens are free
 
@@ -44,6 +47,7 @@ if "jev" not in GD:
                   "rows_evaluated": 0, "cache_hits": 0, "api_ms": 0.0,
                   "batches": 0, "errors": 0},
         "plans": {},
+        "stmt": {"ts": None, "rows": 0, "chars": 0},   # per-statement spend guard
     }
 S = GD["jev"]
 
@@ -70,6 +74,8 @@ max_rows    = int(setting("max_prefetch_rows", "5000"))
 notices     = setting("notices", "on").lower() in ("on", "true", "1", "yes")
 api_url     = setting("api_url", "https://api.typesafe.ai/v1/systemone")
 timeout     = float(setting("timeout", "90"))
+max_stmt_rows  = int(setting("max_rows_per_statement", "0"))
+max_stmt_chars = int(setting("max_chars_per_statement", "0"))
 
 # ---------------------------------------------------------------- question builders
 opts = json.loads(options) if options else None
@@ -136,14 +142,36 @@ def call_api(key, rows):
             time.sleep(delay); delay = min(delay * 2, 8)
     raise RuntimeError("jev: TypeSafe API unreachable after retries: " + str(last))
 
+def guard(pairs, stmt_ts):
+    """Abort before spending if this statement exceeds the configured per-statement limits."""
+    st = S["stmt"]
+    if st["ts"] != stmt_ts:
+        st["ts"], st["rows"], st["chars"] = stmt_ts, 0, 0
+    st["rows"] += len(pairs)
+    st["chars"] += sum(len(t) for _, t in pairs)
+    if max_stmt_rows and st["rows"] > max_stmt_rows:
+        plpy.error("jev: this statement would send %d rows to the API, above jev.max_rows_per_statement = %d"
+                   % (st["rows"], max_stmt_rows))
+    if max_stmt_chars and st["chars"] > max_stmt_chars:
+        plpy.error("jev: this statement would send %d characters of row data to the API, above jev.max_chars_per_statement = %d"
+                   % (st["chars"], max_stmt_chars))
+
 def evaluate(pairs):
     """pairs: list of (row_hash, row_text). Returns {row_hash: answer}. Fills stats."""
     key = api_key()
     batches = [pairs[i:i + batch_size] for i in range(0, len(pairs), batch_size)]
     out = {}
     t0 = time.time()
+    results = [None] * len(batches)
     with ThreadPoolExecutor(max_workers=concurrency) as ex:
-        results = list(ex.map(lambda b: call_api(key, [json.loads(t) for _, t in b]), batches))
+        futures = {ex.submit(call_api, key, [json.loads(t) for _, t in b]): i for i, b in enumerate(batches)}
+        done_rows = 0
+        for n, fut in enumerate(as_completed(futures), 1):
+            i = futures[fut]
+            results[i] = fut.result()          # re-raises the batch's error on the main thread
+            done_rows += len(batches[i])
+            if notices and len(batches) > 1:  # progress for clients that stream NOTICEs (one line per request)
+                plpy.notice("jev: progress %d/%d requests, %d/%d rows" % (n, len(batches), done_rows, len(pairs)))
     for b, data in zip(batches, results):
         st = S["stats"]
         st["requests"] += 1
@@ -181,6 +209,7 @@ if regclass and S["prefetched"].get(cache_key) != stmt_ts:
     if row_hash not in bucket:
         pending[row_hash] = row_json
     if pending:
+        guard(list(pending.items()), stmt_ts)
         try:
             answers, n_req, tokens, ms = evaluate(list(pending.items()))
         except RuntimeError as e:
@@ -195,6 +224,7 @@ if regclass and S["prefetched"].get(cache_key) != stmt_ts:
         return json.dumps(bucket[row_hash])
 
 # Fallback: anonymous record (subquery/CTE) or a row that changed since read-ahead.
+guard([(row_hash, row_json)], stmt_ts)
 try:
     answers, _, tokens, ms = evaluate([(row_hash, row_json)])
 except RuntimeError as e:

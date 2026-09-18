@@ -150,3 +150,25 @@ SELECT (jev_stats()->>'cached_answers')::int AS cached_after_clear;
                   0
 (1 row)
 
+-- Per-statement spend guards abort before anything is sent
+SET jev.max_rows_per_statement = 3;
+SELECT count(*) FROM cities WHERE jev(cities, 'the name is Lima');
+ERROR:  plpy.Error: jev: this statement would send 6 rows to the API, above jev.max_rows_per_statement = 3
+RESET jev.max_rows_per_statement;
+SET jev.max_chars_per_statement = 50;
+SELECT count(*) FROM cities WHERE jev(cities, 'the name is Lima');
+ERROR:  plpy.Error: jev: this statement would send 285 characters of row data to the API, above jev.max_chars_per_statement = 50
+RESET jev.max_chars_per_statement;
+SELECT (jev_stats()->>'requests')::int AS requests_unchanged_by_guard;
+ requests_unchanged_by_guard 
+-----------------------------
+                          10
+(1 row)
+
+-- With the guard lifted the same statement runs
+SELECT count(*) AS lima FROM cities WHERE jev(cities, 'the name is Lima');
+ lima 
+------
+    1
+(1 row)
+

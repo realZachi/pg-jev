@@ -60,3 +60,14 @@ SELECT name FROM cities WHERE jev(cities, 'the country is Germany') AND id > 1 O
 -- Cache can be cleared
 SELECT jev_cache_clear();
 SELECT (jev_stats()->>'cached_answers')::int AS cached_after_clear;
+
+-- Per-statement spend guards abort before anything is sent
+SET jev.max_rows_per_statement = 3;
+SELECT count(*) FROM cities WHERE jev(cities, 'the name is Lima');
+RESET jev.max_rows_per_statement;
+SET jev.max_chars_per_statement = 50;
+SELECT count(*) FROM cities WHERE jev(cities, 'the name is Lima');
+RESET jev.max_chars_per_statement;
+SELECT (jev_stats()->>'requests')::int AS requests_unchanged_by_guard;
+-- With the guard lifted the same statement runs
+SELECT count(*) AS lima FROM cities WHERE jev(cities, 'the name is Lima');
