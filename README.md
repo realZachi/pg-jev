@@ -1,15 +1,20 @@
 <p align="center">
-  <img src="docs/assets/header.svg" alt="pg-jev — natural-language WHERE clauses for PostgreSQL" width="100%">
+  <img src="docs/assets/header.svg" alt="pg-jev — ask your Postgres tables questions in plain language" width="100%">
 </p>
 
-# jev — natural-language `WHERE` clauses for PostgreSQL
+# jev — ask your Postgres tables questions in plain language
 
 [![CI](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml/badge.svg)](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-PostgreSQL-blue.svg)](LICENSE)
+[![Website](https://img.shields.io/badge/website-pgjev.com-0a56cf.svg)](https://pgjev.com)
 
-`jev` lets you filter, rank and classify rows with plain English. Every row is judged by
+Write the condition the way you would say it. Postgres does the rest.
+
+`jev` lets you filter, rank and classify rows with plain-language conditions. Every row is judged by
 [TypeSafe's Jev](https://docs.typesafe.ai), a System One model that returns calibrated probabilities
 instead of generated text. No index, no embeddings, no vector column.
+
+Website: [pgjev.com](https://pgjev.com)
 
 ```sql
 CREATE EXTENSION jev;

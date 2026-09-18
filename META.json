@@ -1,13 +1,13 @@
 {
   "name": "jev",
-  "abstract": "Natural-language WHERE clauses, ranking and classification powered by TypeSafe's Jev model",
+  "abstract": "Ask your Postgres tables questions in plain language: filter, rank and classify rows with TypeSafe's Jev model",
   "description": "jev(table, 'condition') judges every row of a table with TypeSafe's System One model and returns a boolean, a probability, a rubric score or a class. Rows are batched into a few parallel API requests and cached per session. No index required.",
   "version": "0.1.0",
   "maintainer": ["Zachi <me@zachi.dev>"],
   "license": "postgresql",
   "provides": {
     "jev": {
-      "abstract": "Natural-language predicates for PostgreSQL",
+      "abstract": "Plain-language predicates for PostgreSQL",
       "file": "sql/jev--0.1.0.sql",
       "docfile": "README.md",
       "version": "0.1.0"

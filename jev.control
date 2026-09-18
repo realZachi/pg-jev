@@ -1,4 +1,4 @@
-# jev — fuzzy natural-language predicates for PostgreSQL, powered by TypeSafe's Jev
+# jev — ask your Postgres tables questions in plain language, powered by TypeSafe's Jev
 comment = 'Natural-language WHERE clauses without indexes, powered by TypeSafe Jev (System One)'
 default_version = '0.1.0'
 relocatable = false
