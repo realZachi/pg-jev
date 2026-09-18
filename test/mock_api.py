@@ -10,9 +10,11 @@ Rules (so expected output is stable):
 Run: python3 test/mock_api.py [port]   (default 8765)
 """
 import json, sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"   # keep-alive, so the extension's connection reuse is exercised
+
     def log_message(self, *a):  # quiet
         pass
 
@@ -57,4 +59,4 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
-    HTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

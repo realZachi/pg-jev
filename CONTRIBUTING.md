@@ -25,7 +25,8 @@ and review the diff.
 ## Versioning an SQL change
 
 1. Bump `default_version` in `jev.control` and add a new `sql/jev--<new>.sql` (full install script).
-2. Add an upgrade script `sql/jev--<old>--<new>.sql` so `ALTER EXTENSION jev UPDATE` works.
+2. Add an upgrade script `sql/jev--<old>--<new>.sql` so `ALTER EXTENSION jev UPDATE` works. Every object in
+   the main script is `CREATE OR REPLACE`, so the upgrade script is a copy of it with the `\echo` guard adjusted.
 3. Update `META.json`, `CHANGELOG.md` and the version returned by `jev_version()`.
 
 ## Code of conduct
