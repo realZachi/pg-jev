@@ -40,8 +40,9 @@ joins, `GROUP BY`, `LIMIT`, `ORDER BY jev_prob(...)`.
 ## How it works
 
 1. `jev(table, 'condition')` receives the row as a composite value. The first call for a table + condition starts a
-   read-ahead that streams the table in physical order (TID range scans; `OFFSET` pages for views), so memory stays
-   constant whatever the table size.
+   read-ahead that streams the table in physical order (TID range scans; `OFFSET` pages for views).
+   `jev.max_prefetch_rows` limits how far it searches for a requested row and how many skipped rows it retains; it
+   does not limit the answer cache or total session memory.
 2. Rows are packed `jev.batch_size` (20) per request into one shared *state*
    (`{"condition": ..., "rows": [...]}`) with one yes/no [Noul](https://docs.typesafe.ai/primitives/noul)
    question per row. Jev evaluates all questions over one state in parallel, which amortises the ~270-token
@@ -49,9 +50,11 @@ joins, `GROUP BY`, `LIMIT`, `ORDER BY jev_prob(...)`.
 3. Up to 2 × `jev.concurrency` requests are in flight over persistent HTTPS connections, and every row is answered
    as soon as its batch returns, so a `LIMIT` stops the read-ahead after the in-flight window, and rows that cheaper
    predicates filter out before `jev()` runs (`WHERE age > 60 AND jev(...)`) are skipped rather than judged.
-4. Answers are cached per row content for the session, so re-running, changing the threshold or sorting by
-   probability is free. Rows from a subquery or CTE (anonymous `record` type) can't be read ahead and are judged
-   one request at a time; put `jev()` on base tables or views when you can.
+4. Answers are cached per row content and question for the backend session, so re-running, changing the threshold or
+   sorting by probability is free while those answers remain cached. The cache can grow with unique row/question
+   pairs until `jev_cache_clear()` clears it or the backend session ends. Rows from a subquery or CTE (anonymous
+   `record` type) can't be read ahead and are judged one request at a time; put `jev()` on base tables or views when
+   you can.
 
 Measured on a 2,000-row table from Europe (~190 ms to the API): first run ≈ 3.5 s in 100 requests, ≈ 296k input
 tokens, ≈ $0.012; second run ≈ 50 ms; `LIMIT 3` on a new condition ≈ 0.6 s. A new condition in a session that
@@ -156,7 +159,7 @@ All settings are plain GUCs: `SET jev.<name> = ...`, `ALTER ROLE ... SET`, `ALTE
 | `jev.threshold` | `0.5` | Probability at which `jev()` returns true |
 | `jev.batch_size` | `20` | Rows per API request. Accuracy drops measurably above ~20–25 (see above) |
 | `jev.concurrency` | `16` | Parallel API requests; up to twice that many are queued ahead of the executor |
-| `jev.max_prefetch_rows` | `5000` | How far past a cache miss the read-ahead scans to find the requested row, and how many skipped rows it keeps for later requests (memory bound) |
+| `jev.max_prefetch_rows` | `5000` | How far read-ahead searches and how many skipped rows it retains; not a bound on the answer cache or total session memory |
 | `jev.notices` | `on` | Emit a progress `NOTICE` per finished request and a summary per table with request count, tokens, estimated cost and time |
 | `jev.api_url` | `https://api.typesafe.ai/v1/systemone` | Endpoint (proxies, mocks) |
 | `jev.timeout` | `30` | Seconds per API request. Waits are interruptible: `statement_timeout` and cancel requests apply within 250 ms |
@@ -182,8 +185,10 @@ Jev answers the question you wrote, literally. A few things that help (more in t
 - This is a full scan by design: every row the executor asks about goes to the API. Cheaper predicates in the same
   `WHERE` run first and their rejects are skipped; a `LIMIT` stops early; `jev.max_rows_per_statement` caps spend.
 - Row contents are sent to a third-party API. Do not use it on data you may not share.
-- The cache lives in the backend session (PL/Python `GD`). Connection pools with many sessions each warm their
-  own cache.
+- The answer cache lives in the backend session (PL/Python `GD`) and can grow with unique row/question pairs;
+  `jev.max_prefetch_rows` does not cap it. `jev_cache_clear()` clears cached answers and read-ahead state for the
+  current session, and ending the backend session releases the cache. Connection pools with many sessions each warm
+  their own cache.
 - `plpython3u` is an untrusted language: only superusers can create the extension, and functions run with the
   server's OS privileges.
 

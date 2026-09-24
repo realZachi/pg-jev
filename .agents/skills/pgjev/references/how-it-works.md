@@ -20,7 +20,8 @@ are real rather than self-reported.
    A cache hit for that (relation, question) and row content returns immediately without touching SPI or the API.
 2. **Read-ahead.** The first miss for a table + question starts a job that streams the relation in physical
    order: TID range scans for tables and materialised views, `OFFSET`/`LIMIT` pages for views, partitioned and
-   foreign tables, 1,000 rows per SPI page. Memory stays constant whatever the table size.
+   foreign tables, 1,000 rows per SPI page. `jev.max_prefetch_rows` limits how far read-ahead searches and how many
+   skipped rows it retains; it does not cap the per-session answer cache or total session memory.
 3. **Batch.** Rows are packed `jev.batch_size` (20) per request into one shared state
    `{"condition": …, "rows": […]}` with one question per row (`Does the record rows[i] satisfy the condition?`).
    One request judges all 20 in parallel, which amortises the ~270-token request overhead: about 175 input tokens
@@ -32,8 +33,10 @@ are real rather than self-reported.
 5. **Out-of-order rows.** Rows the executor asks for out of physical order (index scans, joins, backward scans)
    are batched with their skipped neighbours rather than sent alone; `jev.max_prefetch_rows` bounds how far the
    read-ahead searches and how many skipped rows it remembers.
-6. **Cache.** Answers are cached by row content in the backend session (PL/Python `GD`). Re-running, changing the
-   threshold, sorting by `jev_prob`, aggregating: free. A different condition is a new scan.
+6. **Cache.** Answers are cached by row content and question in the backend session (PL/Python `GD`). The cache can
+   grow with unique row/question pairs until `jev_cache_clear()` clears cached answers and read-ahead state or the
+   backend session ends. `jev.max_prefetch_rows` does not cap this cache. Re-running, changing the threshold, sorting
+   by `jev_prob`, aggregating: free while answers remain cached. A different condition is a new scan.
 7. **Rows without a relation** (subquery/CTE producing an anonymous `record`) cannot be read ahead and are judged
    one request per row. That is the single most common reason for a slow pgjev query.
 

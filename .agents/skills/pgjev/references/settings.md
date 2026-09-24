@@ -22,13 +22,16 @@ Settings are read once per cache miss (one SPI query), so changing one takes eff
 | `jev.threshold` | `0.5` | probability at which `jev()` returns true (the third argument of `jev()` overrides it) | you want stricter/looser matches without editing every query |
 | `jev.batch_size` | `20` | rows per API request | rarely; accuracy drops measurably above ~20–25 because the model finds `rows[i]` by position. Lower it for very wide rows if you see drift |
 | `jev.concurrency` | `16` | parallel API requests; up to 2× that many are queued ahead of the executor | lower on 429s or to be gentle on a shared key; raising it beyond 16 gives little |
-| `jev.max_prefetch_rows` | `5000` | how far past a cache miss the read-ahead scans to find the requested row, and how many skipped rows it keeps for later (memory bound) | queries with index scans/joins that request rows far apart; memory-constrained servers (lower) |
+| `jev.max_prefetch_rows` | `5000` | how far read-ahead searches and how many skipped rows it retains; not a bound on the per-session answer cache or total session memory | queries with index scans/joins that request rows far apart; tune skipped-row retention only |
 | `jev.notices` | `on` | `NOTICE` per finished request plus a per-table summary (rows, requests, tokens, ≈cost, ms) | `off` in applications and tests |
 | `jev.api_url` | `https://api.typesafe.ai/v1/systemone` | endpoint | proxies, the regression mock (`http://127.0.0.1:8765/v1/systemone`) |
 | `jev.timeout` | `30` | seconds per API request. Waits are interruptible: `statement_timeout` and cancel apply within 250 ms | slow networks |
 | `jev.keepalive` | `600` | seconds a pooled HTTPS connection may idle before it is reconnected | proxies that drop idle connections sooner |
 | `jev.max_rows_per_statement` | `0` (off) | abort a statement that would send more rows than this to the API | shared servers, ad-hoc users, anything where a missing `WHERE` would be expensive |
 | `jev.max_chars_per_statement` | `0` (off) | same, for characters of row data | wide rows / token budget |
+
+The per-session answer cache can grow with unique row/question pairs until `jev_cache_clear()` clears it or the
+backend session ends. `jev.max_prefetch_rows` does not limit that cache.
 
 ## Recommended baseline for a shared server
 
