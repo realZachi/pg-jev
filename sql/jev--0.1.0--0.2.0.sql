@@ -9,13 +9,12 @@
 -- No index is needed. Rows are judged by the model, not matched by pattern.
 --
 -- How a statement runs: the first call for a table + question starts a read-ahead that streams the
--- table in physical order (paged read-ahead), packs jev.batch_size rows
+-- table in physical order (pages of rows, constant memory, any table size), packs jev.batch_size rows
 -- into one API request (one shared state, one question per row) and keeps jev.concurrency requests in
 -- flight over persistent HTTPS connections. Rows are answered as their batch returns, so the executor
 -- never waits for the whole table, a LIMIT stops the read-ahead early, and rows that other predicates
 -- filter out before jev() is called are skipped rather than judged. Answers are cached per row content
--- and question for the backend session; this cache can grow with unique row/question pairs until
--- jev_cache_clear() clears it or the backend session ends.
+-- for the session, so re-running a query, changing the threshold or sorting by probability is free.
 --
 -- Settings (SET jev.<name> = ...):
 --   jev.api_key            TypeSafe API key (falls back to the TYPESAFE_API_KEY env var of the server)
@@ -23,8 +22,8 @@
 --   jev.threshold          default 0.5   probability at which jev() returns true
 --   jev.batch_size         default 20    rows per API request (accuracy drops measurably above ~20-25 rows)
 --   jev.concurrency        default 16    parallel API requests
---   jev.max_prefetch_rows  default 5000  how far read-ahead searches for the row, and how many skipped rows
---                                        it retains for later; this does not bound the answer cache or total session memory
+--   jev.max_prefetch_rows  default 5000  how far past a cache miss the read-ahead scans to find the row, and
+--                                        how many skipped rows it keeps for later (memory bound)
 --   jev.notices            default 'on'  emit progress NOTICEs and a summary per table read-ahead
 --   jev.api_url            default 'https://api.typesafe.ai/v1/systemone' (proxies, mocks, tests)
 --   jev.timeout            default 30    seconds per API request
