@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-03
+
+### Changed
+- **Local Jev-compatible servers work without an API key.** `jev.api_key` is only required when `jev.api_url`
+  is a `*.typesafe.ai` host. For any other endpoint, such as [stuntd](https://github.com/bladedevoff/stuntd)
+  (`http://127.0.0.1:8787/v1/systemone`) or laya-server, requests are sent without an `Authorization` header
+  when no key is set, so pgjev can run with no external calls and no per-row billing. A key that is set is still
+  sent as before. ([#3](https://github.com/realZachi/pg-jev/issues/3))
+
+### Added
+- Upgrade script `jev--0.2.0--0.2.1.sql` (`ALTER EXTENSION jev UPDATE`).
+- Regression test `04_local` for keyless local endpoints; the mock API accepts requests without auth under
+  `/local/`.
+
 ## [0.2.0] - 2026-09-18
 
 Measured against the live API on a 2,000-row table (from Europe, ~190 ms RTT to the API): first run

@@ -7,7 +7,7 @@ SET jev.notices = off;
 SELECT jev_version();
  jev_version 
 -------------
- 0.2.0
+ 0.2.1
 (1 row)
 
 CREATE TABLE cities (id int PRIMARY KEY, name text, country text);

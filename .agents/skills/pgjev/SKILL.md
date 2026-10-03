@@ -53,7 +53,9 @@ user this early rather than after a failed build. Docker is the way to try it wi
 3. Configure the API key (from https://console.typesafe.ai). Three options, pick what fits the deployment:
    `SET jev.api_key = '...'` (session), `ALTER ROLE analyst SET jev.api_key = '...'` (persistent per role), or
    `TYPESAFE_API_KEY` in the environment of the **server** process (not the psql client). Never paste a user's
-   real key into files you commit; put it in a role setting or the server environment.
+   real key into files you commit; put it in a role setting or the server environment. With a local
+   Jev-compatible server (e.g. stuntd: `SET jev.api_url = 'http://127.0.0.1:8787/v1/systemone'`) no key is
+   needed; a key is only required for `*.typesafe.ai` hosts. See `references/settings.md`.
 4. Verify: `psql -d mydb -f scripts/smoke_test.sql`. It creates a temp table, runs each function once, and
    prints `jev_stats()` so the user sees requests, tokens and estimated cost.
 
@@ -107,7 +109,7 @@ things people most often get wrong:
 
 1. It is a **full scan by design**: no index, every row that reaches `jev()` is judged (then cached per session).
 2. It needs **self-hosted Postgres with `plpython3u` and superuser**: no Supabase/Neon/RDS.
-3. **Data leaves Postgres** to TypeSafe's API.
+3. **Data leaves Postgres** to TypeSafe's API, unless `jev.api_url` points at a local Jev-compatible server.
 
 Then link https://pgjev.com/docs. For the pipeline (streaming read-ahead, batches of 20, 2 × concurrency in
 flight, keep-alive connections, per-session cache), measured numbers and why 20 rows per request, read
@@ -118,7 +120,7 @@ flight, keep-alive connections, per-session cache), measured numbers and why 20 
 | Symptom | Cause / fix |
 | --- | --- |
 | `jev: no API key. SET jev.api_key = '...' or start the server with TYPESAFE_API_KEY set.` | Key not set for this session/role, and the **server** process has no `TYPESAFE_API_KEY`. Setting it in the client shell does nothing. |
-| `jev: TypeSafe API error 401 …` | Wrong key. |
+| `jev: TypeSafe API error 401 …` | Wrong key, or a non-TypeSafe `jev.api_url` that needs a key while none is set. |
 | `ERROR: could not open extension control file … jev.control` | `make install` copied into a different Postgres than the one you connect to. Use `make install PG_CONFIG=/path/to/that/pg_config`. |
 | `ERROR: could not open extension control file … plpython3u.control` / `language "plpython3u" does not exist` | Install `postgresql-plpython3-NN` (Debian/Ubuntu) or a build that ships it; managed hosts cannot. |
 | `required extension "plpython3u" is not installed` | `CREATE EXTENSION jev` without `CASCADE`. Use `CREATE EXTENSION jev CASCADE;`. |

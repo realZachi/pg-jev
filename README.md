@@ -131,6 +131,21 @@ SET jev.api_key = 'your-key';
 ALTER ROLE analyst SET jev.api_key = 'your-key';   -- persistent, per role
 ```
 
+### Local Jev-compatible servers
+
+`jev.api_url` can point at any server that speaks the same `POST /v1/systemone` contract, so rows never leave
+your network and there is no per-row billing. Two such servers are
+[stuntd](https://github.com/bladedevoff/stuntd) (Laya behind the Jev API; it also records answers and trains a
+head per question, so a table's decisions can move local over time) and laya-server:
+
+```sql
+SET jev.api_url = 'http://127.0.0.1:8787/v1/systemone';   -- stuntd's default address
+```
+
+An API key is only required for `*.typesafe.ai` hosts. For any other host the request is sent without an
+`Authorization` header when no key is set, and with `Bearer <key>` when one is. The token counts and cost
+estimates in `jev_stats()` and the notices use TypeSafe's list price, whatever the server.
+
 ## Functions
 
 | Function | Returns | Purpose |
@@ -154,14 +169,14 @@ All settings are plain GUCs: `SET jev.<name> = ...`, `ALTER ROLE ... SET`, `ALTE
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `jev.api_key` | env `TYPESAFE_API_KEY` | TypeSafe API key |
+| `jev.api_key` | env `TYPESAFE_API_KEY` | TypeSafe API key. Optional when `jev.api_url` is not a `*.typesafe.ai` host |
 | `jev.model` | `jev-latest` | Model name or pinned version such as `jev-1.13.0` |
 | `jev.threshold` | `0.5` | Probability at which `jev()` returns true |
 | `jev.batch_size` | `20` | Rows per API request. Accuracy drops measurably above ~20–25 (see above) |
 | `jev.concurrency` | `16` | Parallel API requests; up to twice that many are queued ahead of the executor |
 | `jev.max_prefetch_rows` | `5000` | How far read-ahead searches and how many skipped rows it retains; not a bound on the answer cache or total session memory |
 | `jev.notices` | `on` | Emit a progress `NOTICE` per finished request and a summary per table with request count, tokens, estimated cost and time |
-| `jev.api_url` | `https://api.typesafe.ai/v1/systemone` | Endpoint (proxies, mocks) |
+| `jev.api_url` | `https://api.typesafe.ai/v1/systemone` | Endpoint (proxies, mocks, local Jev-compatible servers such as stuntd at `http://127.0.0.1:8787/v1/systemone`; see above) |
 | `jev.timeout` | `30` | Seconds per API request. Waits are interruptible: `statement_timeout` and cancel requests apply within 250 ms |
 | `jev.keepalive` | `600` | Seconds a pooled API connection may sit idle before it is reconnected. The first request on a fresh connection costs a TLS handshake plus, measured, up to 1.5 s of server-side setup, so keep connections alive across queries; TCP keepalive probes catch silently dropped ones |
 | `jev.max_rows_per_statement` | `0` (off) | Abort a statement that would send more rows than this to the API. Spend guard for shared deployments |

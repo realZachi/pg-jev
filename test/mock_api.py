@@ -7,6 +7,8 @@ Rules (so expected output is stable):
   choice -> option index  = length of the row JSON modulo number of options
   A condition containing "trigger422" returns HTTP 422 (non-retryable error path).
   usage.input_tokens = len(request body) // 4
+  Auth: "Bearer test-key" is required, except under /local/ (a local Jev-compatible server without auth),
+  which also accepts requests with no Authorization header at all.
 Run: python3 test/mock_api.py [port]   (default 8765)
 """
 import json, sys
@@ -20,7 +22,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-        if self.headers.get("Authorization", "") != "Bearer test-key":
+        auth = self.headers.get("Authorization")
+        if auth != "Bearer test-key" and not (self.path.startswith("/local/") and auth is None):
             return self._send(401, {"error": "invalid api key"})
         req = json.loads(body)
         state, questions = req["state"], req["questions"]

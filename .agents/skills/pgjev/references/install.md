@@ -116,7 +116,8 @@ The image does not create the extension automatically. To have it created on fir
 
 `jev.api_key` is read on every cache miss with this precedence: GUC (`SET`, role, database, `postgresql.conf`)
 → `TYPESAFE_API_KEY` in the environment of the **postgres server process**. The client's shell environment is
-irrelevant.
+irrelevant. A key is only required for `*.typesafe.ai` hosts; a local Jev-compatible server set in
+`jev.api_url` (see `settings.md`) works without one.
 
 | Scope | How | Use when |
 | --- | --- | --- |
@@ -149,7 +150,7 @@ row with `requests ≥ 1` and `errors = 0`.
 | `pgxn install jev` → distribution not found / no release | not on PGXN (yet), or a typo in the pin | check https://pgxn.org/dist/jev/; install from source |
 | `permission denied to create extension "jev"` / `must be superuser` | not a superuser | connect as one (`postgres`) or ask the DBA |
 | `jev: no API key. SET jev.api_key = '...' or start the server with TYPESAFE_API_KEY set.` | no GUC and no server env | see API key placement; `TYPESAFE_API_KEY` in your shell is not the server's |
-| `jev: TypeSafe API error 401 {...}` | invalid key | check the key in console.typesafe.ai |
+| `jev: TypeSafe API error 401 {...}` | invalid key, or a custom `jev.api_url` that needs a key while none is set | check the key in console.typesafe.ai, or set the key the endpoint expects |
 | `jev: TypeSafe API error 422 {...}` | request rejected (bad model name, malformed options) | check `jev.model`, options arrays |
 | `jev: TypeSafe API error 429/5xx` after retries | rate limit / outage; the extension retries with `Retry-After` | lower `jev.concurrency`, retry later |
 | connection errors / timeouts, `jev.timeout` reached | server cannot reach `api.typesafe.ai:443` | egress firewall, proxy (`jev.api_url` can point at a proxy) |

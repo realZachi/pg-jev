@@ -4,9 +4,11 @@ SET jev.notices = off;
 CREATE TABLE things (id int, v text);
 INSERT INTO things VALUES (1, 'a');
 
--- No key configured anywhere
+-- No key configured anywhere (the TypeSafe API needs one; checked before any request is made)
 SET jev.api_key = '';
+SET jev.api_url = 'https://api.typesafe.ai/v1/systemone';
 SELECT jev(things, 'anything') FROM things;
+SET jev.api_url = 'http://127.0.0.1:8765/v1/systemone';
 
 -- Non-retryable HTTP errors surface as SQL errors
 SET jev.api_key = 'wrong-key';
