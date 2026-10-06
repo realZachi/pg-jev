@@ -2,6 +2,10 @@
   <img src="docs/assets/header.svg" alt="pg-jev — ask your Postgres tables questions in plain language" width="100%">
 </p>
 
+<p align="center">
+  <a href="https://trendshift.io/repositories/244185?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-244185" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/244185/daily?language=Python" alt="realZachi%2Fpg-jev | Trendshift" width="250" height="55"/></a>
+</p>
+
 # jev — ask your Postgres tables questions in plain language
 
 [![CI](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml/badge.svg)](https://github.com/realZachi/pg-jev/actions/workflows/ci.yml)
